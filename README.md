@@ -22,6 +22,8 @@ If you want to subscribe to the [KiTTY website](http://www.9bis.net/kitty/?actio
     % ./rssparser.lisp add "KiTTY" "http://www.9bis.net/kitty/?action=news&zone=en" ".news" "h1" ""
     Success!
     
+    % ./rssparser.lisp parse
+    
     % ./rssparser.lisp list
     1 feed is set up:
     
