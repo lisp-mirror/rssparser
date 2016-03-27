@@ -294,6 +294,7 @@
                           (where (:in :id
                             (select :id
                               (from :entries)
+                              (where (:= :feedid (car feed-id)))
                               (order-by (:desc :timestamp))
                               (limit -1)
                               (offset (* 2 +max-items-per-feed+))))))))
