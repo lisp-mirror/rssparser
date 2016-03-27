@@ -5,8 +5,8 @@ A Web-to-RSS parser in Common Lisp.
 ## Syntax
 
 * *chmod +x rssparser.lisp*, then:
-  * ./rssparser.lisp add *&lt;Title&gt; &lt;URL&gt; &lt;EntrySelector&gt; &lt;TitleSelector&gt; [&lt;ContentSelector&gt;]*
-  * ./rssparser.lisp delete *&lt;ID&gt;*
+  * ./rssparser.lisp add *<Title> <URL> <EntrySelector> <TitleSelector> [<ContentSelector>]*
+  * ./rssparser.lisp delete *<ID>*
   * ./rssparser.lisp list
 
 ***Cronjob or manual feed creation command:***
