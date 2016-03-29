@@ -60,6 +60,15 @@ The feeds.db file has the following schema:
       timestamp integer
     );
 
+## Running as a cronjob
+
+You might have to consider setting the appropriate locale environment variables on certain Unix/Linux systems as the RSS parser relies on UTF-8 compatibility; having UTF-8 in an incoming HTTP stream without being able to handle these characters will probably screw it up. To make sure nothing will happen, you could try to set the environment right in the `crontab` entry:
+
+    0 */6 * * * cd /my/path/to/rssparser/ && export LC_ALL=en_US.UTF-8 && export LANG=en_US.UTF-8 && ./rssparser.lisp parse
+
+This will - probably - run the RSS parser script without any Unicode issues every six hours.
+
+
 ## Options
 
 You can set a couple of parameters in the Lisp file:
