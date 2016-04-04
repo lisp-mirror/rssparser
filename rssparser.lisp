@@ -128,8 +128,9 @@
 ;;; MAIN APPLICATION
 
 
-#+(and (not win32) ccl) (setenv "LANG" "en_US.UTF-8")
-#+(and (not win32) sbcl) (sb-posix:putenv "LANG=en_US.UTF-8")
+;; Force the charset to be Unicode
+#+ccl (setf *default-external-format* :UTF-8)
+#+sbcl (setf sb-impl::*default-external-format* :UTF-8)
 
 (connect-toplevel :sqlite3 :database-name +database-file+)
 
