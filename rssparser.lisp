@@ -128,6 +128,9 @@
 ;;; MAIN APPLICATION
 
 
+#+(and (not win32) ccl) (setenv "LANG" "en_US.UTF-8")
+#+(and (not win32) sbcl) (sb-posix:putenv "LANG=en_US.UTF-8")
+
 (connect-toplevel :sqlite3 :database-name +database-file+)
 
 (defun add-new-feed (params)
@@ -327,6 +330,11 @@
              ;; The feed folder is not writeable.
              (format t "Please fix the access rights for ~a for this script to work.~%" +feed-folder+)
              (return nil))
+
+           (dex:http-request-service-unavailable ()
+             ;; Temporary website error. Retry later.
+             (format t (concatenate 'string "~%Feed " (prin1-to-string (car feed-id)) " has a website which is "
+                                            " temporarily unavailable. We'll try later.")))
   
            (dex:http-request-failed (e)
              ;; Page not found. Assume it is gone.
