@@ -13,6 +13,8 @@ A Web-to-RSS parser in Common Lisp.
 
 * ./rssparser.lisp webserver
 
+(Coming soon, maybe in 2017 or so. ;-))
+
 ***Cronjob or manual feed creation command:***
 
 * ./rssparser.lisp parse
