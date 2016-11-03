@@ -83,7 +83,7 @@
 
 (defun show-syntax ()
   "Prints the command-line syntax for the RSS parser"
-  (format t "Syntax:~% * rssparser.lisp add <Title> <URL> <EntrySelector> <TitleSelector> [<ContentSelector>]~% * rssparser.lisp delete <ID>~% * rssparser.lisp list~%~%If you're a bot:~% * rssparser.lisp parse"))
+  (format t "Syntax:~% * rssparser.lisp add <Title> <URL> <EntrySelector> <TitleSelector> [<ContentSelector>]~% * rssparser.lisp delete <ID>~% * rssparser.lisp list~% * rssparser.lisp webserver~%~%If you're a bot:~% * rssparser.lisp parse"))
 
 
 (defun print-feed-list (list)
@@ -355,6 +355,12 @@
                  (force-output nil))))))))
 
 
+(defun start-webserver ()
+  "Runs the RSS parser's built-in web server."
+  ;; Comes soon (tm)
+)
+
+
 (defun rssparser ()
   "The main function, evaluating the command-line parameters."
   (cond
@@ -388,6 +394,9 @@
     ((string= *script-mode* "parse")
         ;; the parser for existing sites
         (parse-all-feeds))
+    ((string= *script-mode* "webserver")
+        ;; start the web server
+        (start-webserver))
     (t
         ;; else ...
         (show-syntax))))

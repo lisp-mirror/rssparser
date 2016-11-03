@@ -9,6 +9,10 @@ A Web-to-RSS parser in Common Lisp.
   * ./rssparser.lisp delete *<ID>*
   * ./rssparser.lisp list
 
+***Run the web interface:***
+
+* ./rssparser.lisp webserver
+
 ***Cronjob or manual feed creation command:***
 
 * ./rssparser.lisp parse
