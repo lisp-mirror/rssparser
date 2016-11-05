@@ -67,13 +67,13 @@ The feeds.db file has the following schema:
     );
 
 
-## Options
+## Configuration
 
-You can set a couple of parameters in the Lisp file:
+You can set a couple of parameters in the `config.lisp` file:
 
 * `+database-file+`: The SQLite database file. (Default: `feeds.db`.) Note that this file *needs* to be accessible for the RSS parser to work!
 * `+feed-folder+`: The folder where the feed files should be created. (Default: `feeds/`.) The script *needs* to be able to create files there; it checks its permissions automatically and informs you if it needs some help.
 * `+max-items-per-feed+`: The maximum number of items per feed. (Default: `50`.)
 * `+feed-cleanup+`: If set to `t` (which is the default value), the `entries` table will automatically be purged from old entries (only *2 * `+max-items-per-feed+`* are kept). Set this to `nil` if you want to bloat your database.
 * `+remove-dead-feeds+`: If set to `t`, a website which is not reachable anymore will automatically be removed from your feed list. The parser will inform you of that so if you run `rssparser.lisp` as a cronjob, you'll see what happened in your logfiles.
-* `+webserver-port+`: The port to run the webserver on when `rssparser.lisp webserver` is executed. (Default: `5000`.)
+* `+webserver-port+`: The port to run the webserver on when `rssparser.lisp webserver` is executed. It should be available through your firewall. (Default: `5000`.)

@@ -8,62 +8,19 @@
 
 
 ;;; valid syntax:
-;;;  * rssparser add <Title> <URL> <EntrySelector> <TitleSelector> [<ContentSelector>]
-;;;  * rssparser del(ete) <ID>
-;;;  * rssparser list
-;;;  * rssparser webserver
-;;;  * rssparser parse
+;;;  * ./rssparser.lisp add <Title> <URL> <EntrySelector> <TitleSelector> [<ContentSelector>]
+;;;  * ./rssparser.lisp del(ete) <ID>
+;;;  * ./rssparser.lisp list
+;;;  * ./rssparser.lisp webserver
+;;;  * ./rssparser.lisp parse
 
 
-;;; PACKAGE SETUP
+;;; SETUP
 
 (load (merge-pathnames "package.lisp" *load-truename*))
+(load (merge-pathnames "config.lisp" *load-truename*))
 
 (in-package #:rssparser)
-
-
-;;; CONSTANTS AND PARAMETERS
-
-
-(defun get-args ()
-  "Returns the list of command-line parameters"
-  (or
-   #+sbcl sb-ext:*posix-argv*
-   #+ccl *command-line-argument-list*
-   nil))
-
-
-;;; Store the script's command mode in a parameter
-;;; so we won't have to fetch it again and again.
-;;; Also store the arguments.
-(defparameter *script-mode* (cadr (get-args)))
-(defparameter *script-arguments* (cddr (get-args)))
-
-
-;;; Store the database file name and the folder
-;;; for our feed files so we can easily change
-;;; them later if we want to ...
-(defconstant +database-file+ "feeds.db")
-(defconstant +feed-folder+ "feeds/")
-
-
-;;; Store the maximum number of entries per feed.
-(defconstant +max-items-per-feed+ 50)
-
-
-;;; Set up a feed cleaner: If this constant is not NIL,
-;;; the feed parser will remove old entries from the
-;;; database automatically.
-(defconstant +feed-cleanup+ t)
-
-
-;;; If a website is dead, it could automatically be
-;;; removed from the feed list.
-(defconstant +remove-dead-feeds+ t)
-
-
-;; By default, the webserver listens on this port.
-(defconstant +webserver-port+ 5000)
 
 
 
@@ -71,7 +28,7 @@
 
 
 (defun show-syntax ()
-  "Prints the command-line syntax for the RSS parser"
+  "Prints the command-line syntax for the RSS parser."
   (format t "Syntax:~% * rssparser.lisp add <Title> <URL> <EntrySelector> <TitleSelector> [<ContentSelector>]~% * rssparser.lisp delete <ID>~% * rssparser.lisp list~% * rssparser.lisp webserver~%~%If you're a bot:~% * rssparser.lisp parse"))
 
 
