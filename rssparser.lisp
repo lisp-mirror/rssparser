@@ -11,30 +11,16 @@
 ;;;  * rssparser add <Title> <URL> <EntrySelector> <TitleSelector> [<ContentSelector>]
 ;;;  * rssparser del(ete) <ID>
 ;;;  * rssparser list
+;;;  * rssparser webserver
 ;;;  * rssparser parse
 
 
 ;;; PACKAGE SETUP
 
-(load "~/quicklisp/setup.lisp")
-
-(ql:quickload '(:datafly        ;; for database access
-                :cl-ppcre       ;; for regex
-                :dexador        ;; for using the web
-                :clss           ;; for CSS selecting
-                :plump          ;; for parsing XML/DOM
-                :plump-sexp     ;; for converting DOM to S-exps
-                :local-time     ;; for time conversion
-                :xml-emitter)   ;; for creating the RSS files
-             :silent t)
-
-(defpackage #:rssparser
-  (:use :cl :sxql :datafly :xml-emitter :local-time
-    #+sbcl :sb-int
-    #+ccl :ccl))
+(load (merge-pathnames "package.lisp" *load-truename*))
+(load (merge-pathnames "webserver.lisp" *load-truename*))
 
 (in-package #:rssparser)
-
 
 
 ;;; CONSTANTS AND PARAMETERS
@@ -77,6 +63,10 @@
 (defconstant +remove-dead-feeds+ t)
 
 
+;; By default, the webserver listens on this port.
+(defconstant +webserver-port+ 5000)
+
+
 
 ;;; HELPER FUNCTIONS
 
@@ -89,19 +79,19 @@
 (defun print-feed-list (list)
   "Makes the feed list look nicer."
   (loop for feed in list do
-    (let ((id-pair (first feed))
-          (title-pair (second feed))
-          (url-pair (third feed))
-          (lastsuccess-pair (fourth feed)))
+       (let ((id-pair (first feed))
+             (title-pair (second feed))
+             (url-pair (third feed))
+             (lastsuccess-pair (fourth feed)))
 
-     (format t "~%ID: ~a  Title:        ~a~%        URL:          ~a~%        Last success: ~a~%"
-       (cdr id-pair)
-       (cdr title-pair)
-       (cdr url-pair)
-       (if (cdr lastsuccess-pair)
-         (timestamp-to-rssdate (cdr lastsuccess-pair))
-         ;; New feeds don't have a "last success" yet:
-         "-")))))
+         (format t "~%ID: ~a  Title:        ~a~%        URL:          ~a~%        Last success: ~a~%"
+                 (cdr id-pair)
+                 (cdr title-pair)
+                 (cdr url-pair)
+                 (if (cdr lastsuccess-pair)
+                     (timestamp-to-rssdate (cdr lastsuccess-pair))
+                     ;; New feeds don't have a "last success" yet:
+                     "-")))))
 
 
 (clss:define-pseudo-selector external-link (node)
@@ -114,15 +104,65 @@
   "Tries to find an external href in <node>. Returns a list of all found URLs."
   (let ((link-list (clss:select "a:external-link" node)))
     (loop for found-link being the elements of link-list
-          collect (list (plump:attribute found-link "href")))))
+       collect (list (plump:attribute found-link "href")))))
 
 
 (defun timestamp-to-rssdate (timestamp)
   "Returns a readable date from a given timestamp."
   (format-timestring nil
-    (unix-to-timestamp timestamp)
-    :format +rfc-1123-format+))
+                     (unix-to-timestamp timestamp)
+                     :format +rfc-1123-format+))
 
+
+
+;;; WEB SERVER
+
+
+;; Instantiate an AJAX listener for Smackjack
+(defparameter *ajax-processor*
+  (make-instance 'ajax-processor :server-uri "/ajax"))
+
+;; Define the routes for Hunchentoot
+(setq *dispatch-table*
+      (list 'dispatch-easy-handlers
+            (create-ajax-dispatcher *ajax-processor*)))
+
+
+;; Define the HTML output when accessing the web UI
+(define-easy-handler (rssweb :uri "/" :default-request-type :get)
+    ((state-variable :parameter-type 'string))
+  (print-main-html))
+
+
+;; Define an AJAX handler which returns the updated feeds list (as a table)
+(defun-ajax htmltable ()
+  (*ajax-processor* :callback-data :response-text)
+  (with-html-output-to-string
+      (s nil :indent t)
+    (:table
+     (:tr
+      (:th "ID")
+      (:th "Title")
+      (:th "Original URL")
+      (:th "Last success")
+      (:th "Delete"))
+     (loop for feed in (list-all-feeds) do
+          (let ((id-pair (first feed))
+                (title-pair (second feed))
+                (url-pair (third feed))
+                (lastsuccess-pair (fourth feed)))
+            (htm (:tr
+                  (:td (str (cdr id-pair)))
+                  (:td (str (cdr title-pair)))
+                  (:td
+                   (:a :href (cdr url-pair) :target "_blank" (str (cdr url-pair))))
+                  (:td (if (cdr lastsuccess-pair)
+                           (str (timestamp-to-rssdate (cdr lastsuccess-pair)))
+                           "-"))
+                  (:td :class "centered"
+                       (:button :type "button"
+                                :onclick (concatenate 'string "javascript:zapFeed(\"" (write-to-string (cdr id-pair)) "\")")
+                                "x")))))))))
 
 
 ;;; MAIN APPLICATION
@@ -138,38 +178,38 @@
   "Adds a new feed to the database."
   ;; Params: Feed title, URL, entry selector, title sel., [ content sel. ]
   (if
-    (and
-      ;; URL given?
-      (cl-ppcre:scan "^https?://" (second params))
-      ;; Are the necessary params given at all?
-      (>= (list-length params) 4)
-      (<= (list-length params) 5))
-    (progn
-      (if
-        (and
-          ;; Everything but the title must not be a number.
-          (not (numberp (parse-integer (second params) :junk-allowed t)))
-          (not (numberp (parse-integer (third params) :junk-allowed t)))
-          (not (numberp (parse-integer (fourth params) :junk-allowed t))))
-        (progn
-          (let ((content 
-            (if (fifth params)
-                (princ-to-string (fifth params))
-                "Generated with rssparser.lisp.")))
-            (execute
-              ;; all arguments are set (probably even correctly).
-              (insert-into :feeds
-                (set= :feedtitle (princ-to-string (first params))
-                      :url (princ-to-string (second params))
-                      :entryselector (princ-to-string (third params))
-                      :titleselector (princ-to-string (fourth params))
-                      :contentselector content))))
-          t)
-        nil))
-    (progn
-      ;; invalid number of arguments
-      (show-syntax)
-      nil)))
+   (and
+    ;; URL given?
+    (cl-ppcre:scan "^https?://" (second params))
+    ;; Are the necessary params given at all?
+    (>= (list-length params) 4)
+    (<= (list-length params) 5))
+   (progn
+     (if
+      (and
+       ;; Everything but the title must not be a number.
+       (not (numberp (parse-integer (second params) :junk-allowed t)))
+       (not (numberp (parse-integer (third params) :junk-allowed t)))
+       (not (numberp (parse-integer (fourth params) :junk-allowed t))))
+      (progn
+        (let ((content
+               (if (fifth params)
+                   (princ-to-string (fifth params))
+                   "Generated with rssparser.lisp.")))
+          (execute
+           ;; all arguments are set (probably even correctly).
+           (insert-into :feeds
+                        (set= :feedtitle (princ-to-string (first params))
+                              :url (princ-to-string (second params))
+                              :entryselector (princ-to-string (third params))
+                              :titleselector (princ-to-string (fourth params))
+                              :contentselector content))))
+        t)
+      nil))
+   (progn
+     ;; invalid number of arguments
+     (show-syntax)
+     nil)))
 
 
 (defun delete-feed (id)
@@ -185,15 +225,15 @@
       (progn
         ;; This feed exists. Remove it.
         (execute (delete-from :feeds
-                  (where (:= :id id-to-delete))))
+                              (where (:= :id id-to-delete))))
         (execute (delete-from :entries
-                  (where (:= :feedid id-to-delete))))
+                              (where (:= :feedid id-to-delete))))
         ;; Now that the database entry is gone, we don't
         ;; need the XML file anymore.
         (let
-          ;; The file is probably "feeds/feed<ID>.xml".
-          ((feed-file (probe-file (concatenate 'string +feed-folder+ "feed" id-to-delete ".xml"))))
-            (if feed-file
+            ;; The file is probably "feeds/feed<ID>.xml".
+            ((feed-file (probe-file (concatenate 'string +feed-folder+ "feed" id-to-delete ".xml"))))
+          (if feed-file
               ;; We have an XML file. Yet.
               (delete-file feed-file)))
         t)
@@ -205,17 +245,26 @@
      nil)))
 
 
+;; AJAX handler for feed deletion:
+(defun-ajax delfeed (feed-id)
+  (*ajax-processor* :callback-data :response-text)
+  (if
+   (delete-feed (list feed-id))
+   (concatenate 'string "Deleted feed " feed-id)
+   "Failed to delete the feed, sorry."))
+
+
 (defun list-all-feeds ()
   "Lists all known feeds."
   (retrieve-all
-    (select (:id :feedtitle :url :lastsuccess)
-      (from :feeds))
+   (select (:id :feedtitle :url :lastsuccess)
+           (from :feeds))
    :as 'trivial-types:association-list))
 
 
 (defun parse-all-feeds ()
   "Loops over the known feeds and generates the XML files."
-  ;(declare (optimize (compilation-speed 3) (speed 3) (safety 0)))
+                                        ;(declare (optimize (compilation-speed 3) (speed 3) (safety 0)))
   (loop for feed in
        (retrieve-all
         (select (:feedtitle :url :entryselector :titleselector :contentselector :id)
@@ -254,7 +303,7 @@
 
                             ;; Loop over all titles/contents and add an RSS item for each of them
                             (loop for single-title being the elements of titles
-                                  for single-contents being the elements of contents
+                               for single-contents being the elements of contents
                                do
                                  (let
                                      ;; Grab the plain text from the title:
@@ -265,67 +314,67 @@
                                       (our-contents (plump:serialize (plump-sexp:parse (plump-sexp:serialize single-contents)) nil)))
                                    ;; Write the data to the database:
                                    (when
-                                     (and
+                                       (and
                                         our-title
                                         our-contents
 
                                         ;; Only do it if we don't have this item yet :-)
                                         (not (retrieve-all
-                                          (select :*
-                                            (from :entries)
-                                            (where (:and
-                                              (:= :feedid (car feed-id))
-                                              (:= :title our-title)))))))
+                                              (select :*
+                                                      (from :entries)
+                                                      (where (:and
+                                                              (:= :feedid (car feed-id))
+                                                              (:= :title our-title)))))))
 
-                                       (execute
-                                         (insert-into :entries
-                                           (set= :feedid (princ-to-string (car feed-id))
-                                                 :title (princ-to-string our-title)
-                                                 :contents (princ-to-string our-contents)
-                                                 :url (if our-url (princ-to-string (caar our-url)) feed-url)
-                                                 :timestamp (timestamp-to-unix (now)))))))
+                                     (execute
+                                      (insert-into :entries
+                                                   (set= :feedid (princ-to-string (car feed-id))
+                                                         :title (princ-to-string our-title)
+                                                         :contents (princ-to-string our-contents)
+                                                         :url (if our-url (princ-to-string (caar our-url)) feed-url)
+                                                         :timestamp (timestamp-to-unix (now)))))))
 
-                                   ;; Update the success timestamp in the database.
-                                   (execute
-                                     (update :feeds
-                                       (set= :lastsuccess (timestamp-to-unix (now)))
-                                       (where (:= :id (car feed-id))))))))
+                               ;; Update the success timestamp in the database.
+                                 (execute
+                                  (update :feeds
+                                          (set= :lastsuccess (timestamp-to-unix (now)))
+                                          (where (:= :id (car feed-id))))))))
 
-                    ;; Clean up if requested.
-                    (when +feed-cleanup+
-                      (execute
+                     ;; Clean up if requested.
+                     (when +feed-cleanup+
+                       (execute
                         (delete-from :entries
-                          (where (:in :id
-                            (select :id
-                              (from :entries)
-                              (where (:= :feedid (car feed-id)))
-                              (order-by (:desc :timestamp))
-                              (limit -1)
-                              (offset (* 2 +max-items-per-feed+))))))))
+                                     (where (:in :id
+                                                 (select :id
+                                                         (from :entries)
+                                                         (where (:= :feedid (car feed-id)))
+                                                         (order-by (:desc :timestamp))
+                                                         (limit -1)
+                                                         (offset (* 2 +max-items-per-feed+))))))))
 
-                    ;; We have a nicely filled database now.
-                    ;; Grab the newest entries and put them into our feed.
-                    (loop for item-list in
-                      (retrieve-all
-                        (select (:title :contents :url :timestamp)
-                          (from :entries)
-                          (where (:= :feedid (car feed-id)))
-                          (order-by (:asc :timestamp))
-                          (limit +max-items-per-feed+))
-                      :as 'trivial-types:association-list)
-                    do
-                      ;; Our list should look as follows now:
-                      ;; ((TITLE) (CONTENTS) (URL) (TIMESTAMP))
-                      (let ((this-title (cdr (first item-list)))
-                            (this-contents (cdr (second item-list)))
-                            (this-url (cdr (third item-list)))
-                            (this-timestamp (cdr (fourth item-list))))
+                     ;; We have a nicely filled database now.
+                     ;; Grab the newest entries and put them into our feed.
+                     (loop for item-list in
+                          (retrieve-all
+                           (select (:title :contents :url :timestamp)
+                                   (from :entries)
+                                   (where (:= :feedid (car feed-id)))
+                                   (order-by (:asc :timestamp))
+                                   (limit +max-items-per-feed+))
+                           :as 'trivial-types:association-list)
+                        do
+                        ;; Our list should look as follows now:
+                        ;; ((TITLE) (CONTENTS) (URL) (TIMESTAMP))
+                          (let ((this-title (cdr (first item-list)))
+                                (this-contents (cdr (second item-list)))
+                                (this-url (cdr (third item-list)))
+                                (this-timestamp (cdr (fourth item-list))))
 
-                        ;; Write each fetched item to the RSS file.
-                        (rss-item (princ-to-string this-title)
-                                  :link this-url
-                                  :description (princ-to-string this-contents)
-                                  :pubDate (princ-to-string (timestamp-to-rssdate this-timestamp)))))))))
+                            ;; Write each fetched item to the RSS file.
+                            (rss-item (princ-to-string this-title)
+                                      :link this-url
+                                      :description (princ-to-string this-contents)
+                                      :pubDate (princ-to-string (timestamp-to-rssdate this-timestamp)))))))))
 
            (simple-file-error ()
              ;; The feed folder is not writeable.
@@ -335,71 +384,73 @@
            (dex:http-request-service-unavailable ()
              ;; Temporary website error. Retry later.
              (format t (concatenate 'string "~%Feed " (prin1-to-string (car feed-id)) " has a website which is "
-                                            " temporarily unavailable. We'll try later.")))
-  
+                                    " temporarily unavailable. We'll try later.")))
+
            (dex:http-request-failed (e)
              ;; Page not found. Assume it is gone.
              (if +remove-dead-feeds+
-               (progn
-                 ;; Remove the page from the feeds.
-                 (format t (concatenate 'string
-                                        "~%Feed " (prin1-to-string (car feed-id)) " seems to have a broken website: "
-                                        feed-url " could not be reached (" e "). We'll better remove it."))
-                 (force-output nil)
-                 (delete-feed (list (write-to-string (car feed-id)))))
-               (progn
-                 ;; Display a warning.
-                 (format t (concatenate 'string
-                                        "~%Feed " (prin1-to-string (car feed-id)) " seems to have a broken website: "
-                                        feed-url " could not be reached (" e ")."))
-                 (force-output nil))))))))
+                 (progn
+                   ;; Remove the page from the feeds.
+                   (format t (concatenate 'string
+                                          "~%Feed " (prin1-to-string (car feed-id)) " seems to have a broken website: "
+                                          feed-url " could not be reached (" e "). We'll better remove it."))
+                   (force-output nil)
+                   (delete-feed (list (write-to-string (car feed-id)))))
+                 (progn
+                   ;; Display a warning.
+                   (format t (concatenate 'string
+                                          "~%Feed " (prin1-to-string (car feed-id)) " seems to have a broken website: "
+                                          feed-url " could not be reached (" e ")."))
+                   (force-output nil))))))))
 
 
 (defun start-webserver ()
   "Runs the RSS parser's built-in web server."
-  ;; Comes soon (tm)
-)
+  (format t "Starting the web server. Press Ctrl+C to quit.")
+  (force-output nil)
+  (defparameter *server*
+    (start (make-instance 'easy-acceptor :port +webserver-port+))))
 
 
 (defun rssparser ()
   "The main function, evaluating the command-line parameters."
   (cond
     ((string= *script-mode* "add")
-        ;; add an entry
-        (when
-          (add-new-feed *script-arguments*)
-          (format t "Success!")))
+     ;; add an entry
+     (when
+         (add-new-feed *script-arguments*)
+       (format t "Success!")))
     ((or
       (string= *script-mode* "delete")
       (string= *script-mode* "del"))
-        ;; remove an entry
-        (if
-          (delete-feed *script-arguments*) 
-          (format t "Deletion successful!")
-          (format t "This feed could not be deleted.")))
-    ((string= *script-mode* "list") 
-        ;; list all entries
-        (let ((feedlist (list-all-feeds)))
-          (if feedlist
-            (progn
-              ;; print a list of feeds
-              (format t (concatenate 'string 
-                (prin1-to-string (list-length feedlist))
-                (if (eql 1 (list-length feedlist))
-                  " feed is set up:~%"
-                  " feeds are set up:~%")))
-              (force-output nil)
-              (print-feed-list feedlist))
-            (format t "You don't have any feeds yet."))))
+     ;; remove an entry
+     (if
+      (delete-feed *script-arguments*)
+      (format t "Deletion successful!")
+      (format t "This feed could not be deleted.")))
+    ((string= *script-mode* "list")
+     ;; list all entries
+     (let ((feedlist (list-all-feeds)))
+       (if feedlist
+           (progn
+             ;; print a list of feeds
+             (format t (concatenate 'string
+                                    (prin1-to-string (list-length feedlist))
+                                    (if (eql 1 (list-length feedlist))
+                                        " feed is set up:~%"
+                                        " feeds are set up:~%")))
+             (force-output nil)
+             (print-feed-list feedlist))
+           (format t "You don't have any feeds yet."))))
     ((string= *script-mode* "parse")
-        ;; the parser for existing sites
-        (parse-all-feeds))
+     ;; the parser for existing sites
+     (parse-all-feeds))
     ((string= *script-mode* "webserver")
-        ;; start the web server
-        (start-webserver))
+     ;; start the web server
+     (start-webserver))
     (t
-        ;; else ...
-        (show-syntax))))
+     ;; else ...
+     (show-syntax))))
 
 
 
