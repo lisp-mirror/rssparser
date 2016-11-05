@@ -74,6 +74,9 @@
 ;;; WEB SERVER
 
 
+;; Define a parameter to determine if a method has been called via web interface.
+(defparameter *is-web* nil)
+
 ;; Make Parenscript coexist with CL-WHO
 (setf parenscript:*js-string-delimiter* #\")
 
@@ -109,6 +112,11 @@
                       :font-size 12px)
                     '(h1
                       :margin 5px)
+                    '(div#controls
+                      :display block
+                      :width "calc (100% - 20px)"
+                      :padding 10px
+                      :background-color lightgrey)
                     '(table
                       :margin 10px
                       :border-collapse collapse
@@ -127,6 +135,12 @@
                       :left 0px))))
       (:script :type "text/javascript"
                (str (ps
+                     (defun add-feed ()
+                       (alert "todo"))
+
+                     (defun parse-all ()
+                       (chain smackjack (parsefeeds)))
+
                      (defun update-table (htmltext)
                        (setf (chain document (get-element-by-id "ajaxtable") inner-h-t-m-l) htmltext))
 
@@ -140,6 +154,13 @@
                        nil)))))
      (:body
       (:h1 "RSSParser Web Control Center")
+      (:div :id "controls"
+            (:button :type "button"
+                     :onclick "javascript:parseAll()"
+                     "Parse All Feeds")
+            (:button :type "button"
+                     :onclick "javascript:addFeed()"
+                     "Add a Feed"))
       (:div :id "ajaxtable")
       (:div :id "footer"
             (:a :href "http://bitbucket.org/tux_/rssparser.lisp" :target "_blank" "Powered by RSSParser.lisp"))
@@ -174,6 +195,7 @@
                            "-"))
                   (:td :class "centered"
                        (:button :type "button"
+                                :title (concatenate 'string "Delete the " (write-to-string (cdr title-pair)) " feed")
                                 :onclick (concatenate 'string "javascript:zapFeed(\"" (write-to-string (cdr id-pair)) "\")")
                                 "x")))))))))
 
@@ -182,8 +204,7 @@
 
 
 ;; Force the charset to be Unicode
-#+ccl (setf *default-external-format* :UTF-8)
-#+sbcl (setf sb-impl::*default-external-format* :UTF-8)
+(setf sb-impl::*default-external-format* :UTF-8)
 
 (connect-toplevel :sqlite3 :database-name +database-file+)
 
@@ -277,7 +298,6 @@
 
 (defun parse-all-feeds ()
   "Loops over the known feeds and generates the XML files."
-                                        ;(declare (optimize (compilation-speed 3) (speed 3) (safety 0)))
   (loop for feed in
        (retrieve-all
         (select (:feedtitle :url :entryselector :titleselector :contentselector :id)
@@ -391,7 +411,8 @@
 
            (simple-file-error ()
              ;; The feed folder is not writeable.
-             (format t "Please fix the access rights for ~a for this script to work.~%" +feed-folder+)
+             (unless *is-web*
+               (format t "Please fix the access rights for ~a for this script to work.~%" +feed-folder+))
              (return nil))
 
            (dex:http-request-service-unavailable ()
@@ -404,17 +425,28 @@
              (if +remove-dead-feeds+
                  (progn
                    ;; Remove the page from the feeds.
-                   (format t (concatenate 'string
-                                          "~%Feed " (prin1-to-string (car feed-id)) " seems to have a broken website: "
-                                          feed-url " could not be reached (" e "). We'll better remove it."))
+                   (unless *is-web*
+                     (format t (concatenate 'string
+                                            "~%Feed " (prin1-to-string (car feed-id)) " seems to have a broken website: "
+                                            feed-url " could not be reached (" e "). We'll better remove it.")))
                    (force-output nil)
                    (delete-feed (list (write-to-string (car feed-id)))))
                  (progn
                    ;; Display a warning.
-                   (format t (concatenate 'string
-                                          "~%Feed " (prin1-to-string (car feed-id)) " seems to have a broken website: "
-                                          feed-url " could not be reached (" e ")."))
-                   (force-output nil))))))))
+                   (unless *is-web*
+                     (format t (concatenate 'string
+                                            "~%Feed " (prin1-to-string (car feed-id)) " seems to have a broken website: "
+                                            feed-url " could not be reached (" e ").")))
+                   (force-output nil)))))))
+
+  (setf *is-web* nil))
+
+
+;; AJAX handler for feed parsing:
+(defun-ajax parsefeeds ()
+  (*ajax-processor* :callback-data :response-text)
+  (setf *is-web* t)
+  (parse-all-feeds))
 
 
 (defun start-webserver ()

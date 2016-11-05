@@ -27,25 +27,25 @@ If you want to subscribe to the [KiTTY website](http://www.9bis.net/kitty/?actio
 
     % ./rssparser.lisp add "KiTTY" "http://www.9bis.net/kitty/?action=news&zone=en" ".news" "h1" ""
     Success!
-    
+
     % ./rssparser.lisp parse
-    
+
     % ./rssparser.lisp list
     1 feed is set up:
-    
+
     ID: 23  Title:        KiTTY
             URL:          http://www.9bis.net/kitty/?action=news&zone=en
             Last success: Sun, 27 Mar 2016 17:54:18 +0200
-            
+
 By default, the KiTTY website feed will be stored as `feeds/feed23.xml` then.
 
 ## Requirements
 
-[SBCL](http://www.sbcl.org) with [Quicklisp](http://www.quicklisp.org) set up. Also, [SQLite3](http://www.sqlite3.org) with a database file ready. Also, you should create a folder where your feed files should be created.
+You'll need the files from this repository and [SBCL](http://www.sbcl.org) with [Quicklisp](http://www.quicklisp.org) set up. [SQLite3](http://www.sqlite3.org) should be available. Also, you should create a folder where your feed files should be created (`./feeds` by default). Hard links are allowed.
 
 ### SQLite schema
 
-The feeds.db file has the following schema:
+The `feeds.db` file has the following schema:
 
     CREATE TABLE feeds (
       id integer primary key autoincrement,
@@ -56,7 +56,7 @@ The feeds.db file has the following schema:
       contentselector text not null,
       lastsuccess integer
     );
-    
+
     CREATE TABLE entries (
       id integer primary key autoincrement,
       feedid integer,

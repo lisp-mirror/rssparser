@@ -27,7 +27,5 @@
               :silent t)
 
 (defpackage #:rssparser
-  (:use :cl :sxql :datafly :xml-emitter :local-time :hunchentoot :cl-who :lass :smackjack
-        #+sbcl :sb-int
-        #+ccl :ccl)
+  (:use :cl :sxql :datafly :xml-emitter :local-time :hunchentoot :cl-who :lass :smackjack :sb-int)
   (:import-from :parenscript :ps :chain))
