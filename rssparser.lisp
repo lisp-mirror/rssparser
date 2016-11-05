@@ -18,7 +18,6 @@
 ;;; PACKAGE SETUP
 
 (load (merge-pathnames "package.lisp" *load-truename*))
-(load (merge-pathnames "webserver.lisp" *load-truename*))
 
 (in-package #:rssparser)
 
@@ -118,6 +117,12 @@
 ;;; WEB SERVER
 
 
+;; Make Parenscript coexist with CL-WHO
+(setf parenscript:*js-string-delimiter* #\")
+
+;; Set the output doctype
+(setf (html-mode) :html5)
+
 ;; Instantiate an AJAX listener for Smackjack
 (defparameter *ajax-processor*
   (make-instance 'ajax-processor :server-uri "/ajax"))
@@ -131,7 +136,58 @@
 ;; Define the HTML output when accessing the web UI
 (define-easy-handler (rssweb :uri "/" :default-request-type :get)
     ((state-variable :parameter-type 'string))
-  (print-main-html))
+  (with-html-output-to-string
+      (s nil :indent t)
+
+    (:html
+     (:head
+      (:title "RSSParser Web Control Center")
+      (str (generate-prologue *ajax-processor*))
+      (:style :type "text/css"
+              (str (compile-and-write
+                    '(body
+                      :margin 0
+                      :padding 0
+                      :font-family monospace
+                      :font-size 12px)
+                    '(h1
+                      :margin 5px)
+                    '(table
+                      :margin 10px
+                      :border-collapse collapse
+                      (tr
+                       (td
+                        :border 1px solid darkgray
+                        :padding 4px)
+                       (td.centered
+                        :text-align center)))
+                    '(div#footer
+                      :position fixed
+                      :width 100%
+                      :padding 5px
+                      :display block
+                      :bottom 0px
+                      :left 0px))))
+      (:script :type "text/javascript"
+               (str (ps
+                     (defun update-table (htmltext)
+                       (setf (chain document (get-element-by-id "ajaxtable") inner-h-t-m-l) htmltext))
+
+                     (defun request-table ()
+                       (chain smackjack (htmltable update-table))
+                       nil)
+
+                     (defun zap-feed (feedid)
+                       (chain smackjack (delfeed feedid))
+                       (request-table)
+                       nil)))))
+     (:body
+      (:h1 "RSSParser Web Control Center")
+      (:div :id "ajaxtable")
+      (:div :id "footer"
+            (:a :href "http://bitbucket.org/tux_/rssparser.lisp" :target "_blank" "Powered by RSSParser.lisp"))
+      (:script :type "text/javascript"
+               (str (ps (request-table))))))))
 
 
 ;; Define an AJAX handler which returns the updated feeds list (as a table)
