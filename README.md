@@ -2,6 +2,14 @@
 
 A Web-to-RSS parser in Common Lisp.
 
+## What does it do?
+
+This software was written because a disappointing number of websites still does not have an RSS or Atom feed so I could subscribe to their updates, e.g. the [KiTTY website](http://www.9bis.net/kitty/?action=news&zone=en). The script tries to find new *articles* on any website according to given criteria (CSS selectors) and parse them into a valid RSS feed so I can subscribe to them in my usual RSS feed reader.
+
+## Screenshot
+
+![Screenshot](http://i.imgur.com/fzkvW9H.png)
+
 ## Syntax
 
 * *chmod +x rssparser.lisp*, then:
@@ -19,13 +27,9 @@ A Web-to-RSS parser in Common Lisp.
 
 Supported *selectors* are all valid [CSS selectors](http://www.w3schools.com/cssref/css_selectors.asp). If you don't specify a `ContentSelector` when adding a new feed, `rssparser.lisp` will use "Generated with rssparser.lisp." as every feed item's body.
 
-### Screenshot
-
-![Screenshot](http://i.imgur.com/fzkvW9H.png)
-
 ### Example
 
-If you want to subscribe to the [KiTTY website](http://www.9bis.net/kitty/?action=news&zone=en), you can either use the web interface or perform the following commands:
+If you want to subscribe to the KiTTY website, you can either use the web interface or perform the following commands:
 
     % ./rssparser.lisp add "KiTTY" "http://www.9bis.net/kitty/?action=news&zone=en" ".news" "h1" ""
     Success!
