@@ -17,7 +17,11 @@ A Web-to-RSS parser in Common Lisp.
 
 * ./rssparser.lisp parse
 
-Supported *selectors* are all valid CSS selectors. If you don't specify a `ContentSelector` when adding a new feed, `rssparser.lisp` will use "Generated with rssparser.lisp." as every feed item's body.
+Supported *selectors* are all valid [CSS selectors](http://www.w3schools.com/cssref/css_selectors.asp). If you don't specify a `ContentSelector` when adding a new feed, `rssparser.lisp` will use "Generated with rssparser.lisp." as every feed item's body.
+
+### Screenshot
+
+![Screenshot](http://i.imgur.com/fzkvW9H.png)
 
 ### Example
 
