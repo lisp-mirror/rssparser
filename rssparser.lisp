@@ -290,7 +290,9 @@
         (let ((content
                (if (fifth params)
                    (princ-to-string (fifth params))
-                   "Generated with rssparser.lisp.")))
+                   ;; Make life somewhat easier for Web UI users: If
+                   ;; nothing is entered, handle it as an empty string.
+                   (if *is-web*  "" "Generated with rssparser.lisp."))))
           (execute
            ;; all arguments are set (probably even correctly).
            (insert-into :feeds
@@ -310,10 +312,12 @@
 ;; AJAX handler for feed addition:
 (defun-ajax ajax-add-feed (params)
   (*ajax-processor* :callback-data :response-text)
+  (setf *is-web* t)
   (if
    (add-new-feed params)
    "We successfully added your feed. :-)"
-   "Sorry, something went wrong. :-("))
+   "Sorry, something went wrong. :-(")
+  (setf *is-web* nil))
 
 
 (defun delete-feed (id)
