@@ -13,8 +13,6 @@ A Web-to-RSS parser in Common Lisp.
 
 * ./rssparser.lisp webserver
 
-(*Note:* Currently the built-in web server can only list and delete feeds. Adding new feeds will come later.)
-
 ***Cronjob or manual feed creation command:***
 
 * ./rssparser.lisp parse
@@ -23,7 +21,7 @@ Supported *selectors* are all valid CSS selectors. If you don't specify a `Conte
 
 ### Example
 
-If you want to subscribe to the [KiTTY website](http://www.9bis.net/kitty/?action=news&zone=en):
+If you want to subscribe to the [KiTTY website](http://www.9bis.net/kitty/?action=news&zone=en), you can either use the web interface or perform the following commands:
 
     % ./rssparser.lisp add "KiTTY" "http://www.9bis.net/kitty/?action=news&zone=en" ".news" "h1" ""
     Success!
