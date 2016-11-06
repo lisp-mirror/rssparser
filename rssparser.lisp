@@ -112,11 +112,32 @@
                       :font-size 12px)
                     '(h1
                       :margin 5px)
+                    '(input
+                      :width 335px)
                     '(div#controls
                       :display block
                       :width "calc (100% - 20px)"
                       :padding 10px
                       :background-color lightgrey)
+                    '(div#addfeed
+                      :display none
+                      :position absolute
+                      :font-family sans-serif
+                      :top 5px
+                      :right 5px
+                      :border 1px solid darkgray
+                      :padding 8px
+                      :background-color white
+                      (b
+                       :margin-bottom 6px)
+                      (div
+                       :display inline-block)
+                      (div.label
+                       :width 100px)
+                      (div.explanation
+                       :width 440px
+                       :margin-bottom 4px
+                       :font-size 11px))
                     '(table
                       :margin 10px
                       :border-collapse collapse
@@ -135,11 +156,33 @@
                       :left 0px))))
       (:script :type "text/javascript"
                (str (ps
+                     (defun print-response-callback (response)
+                       (alert response))
+
                      (defun add-feed ()
-                       (alert "todo"))
+                       (setf (chain document (get-element-by-id "addfeed") style display) "inline-block"))
+
+                     (defun add-this-feed ()
+                       (let ((title (chain document (get-element-by-id "TitleToAdd") value))
+                             (url (chain document (get-element-by-id "URLToAdd") value))
+                             (entry-selector (chain document (get-element-by-id "EntrySelectorToAdd") value))
+                             (title-selector (chain document (get-element-by-id "TitleSelectorToAdd") value))
+                             (content-selector (chain document (get-element-by-id "ContentSelectorToAdd") value)))
+                         (if (or (not title) (not url) (not entry-selector) (not title-selector))
+                             (alert "You should enter valid feed data before we can process your request.")
+                             (progn
+                               (chain smackjack (ajax-add-feed (list title url entry-selector title-selector content-selector) print-response-callback))
+                               (close-add-feed-dlg)
+                               (request-table)))))
+
+                     (defun close-add-feed-dlg ()
+                       (loop for inputid in (list "TitleToAdd" "URLToAdd" "EntrySelectorToAdd" "TitleSelectorToAdd" "ContentSelectorToAdd") do
+                            (setf (chain document (get-element-by-id inputid) value) nil))
+                       (setf (chain document (get-element-by-id "addfeed") style display) "none"))
 
                      (defun parse-all ()
-                       (chain smackjack (parsefeeds)))
+                       (chain smackjack (ajax-parse-feeds print-response-callback))
+                       (request-table))
 
                      (defun update-table (htmltext)
                        (setf (chain document (get-element-by-id "ajaxtable") inner-h-t-m-l) htmltext))
@@ -149,18 +192,36 @@
                        nil)
 
                      (defun zap-feed (feedid)
-                       (chain smackjack (delfeed feedid))
+                       (chain smackjack (ajax-delete-feed feedid))
                        (request-table)
                        nil)))))
      (:body
       (:h1 "RSSParser Web Control Center")
       (:div :id "controls"
             (:button :type "button"
-                     :onclick "javascript:parseAll()"
+                     :onclick (ps (parse-all))
                      "Parse All Feeds")
             (:button :type "button"
-                     :onclick "javascript:addFeed()"
+                     :onclick (ps (add-feed))
                      "Add a Feed"))
+      (:div :id "addfeed"
+            (:div :class "explanation" "Please type the title of the feed you'd like to add.") (:br)
+            (:div :class "label" "Title:") (:input :type "text" :id "TitleToAdd" :placeholder "e.g. KiTTY") (:br) (:br)
+            (:div :class "explanation" "Please type the URL of the website you want to make an RSS feed of.") (:br)
+            (:div :class "label" "URL:") (:input :type "text" :id "URLToAdd" :placeholder "e.g. http://www.9bis.net/kitty/?action=news&zone=en") (:br) (:br)
+            (:b "CSS Selectors:") (:a :href "http://www.w3schools.com/cssref/trysel.asp" :target "_blank" "[?]") (:br)
+            (:div :class "explanation" (str (concatenate 'string "Please type the single entry selector of the feed. For a blog, this is usually a DIV named \"article\" or similar. RSSParser.lisp will use this selector as the container selector for the following elements."))) (:br)
+            (:div :class "label" "Selector:") (:input :type "text" :id "EntrySelectorToAdd" :placeholder "e.g. .news") (:br) (:br)
+            (:div :class "explanation" "Please type the title selector of the feed. This is usually the headline inside the entry selector.") (:br)
+            (:div :class "label" "Selector:") (:input :type "text" :id "TitleSelectorToAdd" :placeholder "e.g. h1") (:br) (:br)
+            (:div :class "explanation" (str (concatenate 'string (htm (:em "(Optional)")) " Please type the content selector of the feed. This is usually the text part of the entry selector. If this is left blank, RSSParser.lisp will use the complete entry selector for the contents of your feed items."))) (:br)
+            (:div :class "label" "Selector:") (:input :type "text" :id "ContentSelectorToAdd" :placeholder "e.g. \"\"") (:br) (:br)
+            (:button :type "button"
+                     :onclick (ps (add-this-feed))
+                     "Add this feed")
+            (:button :type "button"
+                     :onclick (ps (close-add-feed-dlg))
+                     "Cancel"))
       (:div :id "ajaxtable")
       (:div :id "footer"
             (:a :href "http://bitbucket.org/tux_/rssparser.lisp" :target "_blank" "Powered by RSSParser.lisp"))
@@ -246,6 +307,15 @@
      nil)))
 
 
+;; AJAX handler for feed addition:
+(defun-ajax ajax-add-feed (params)
+  (*ajax-processor* :callback-data :response-text)
+  (if
+   (add-new-feed params)
+   "We successfully added your feed. :-)"
+   "Sorry, something went wrong. :-("))
+
+
 (defun delete-feed (id)
   "Deletes a feed and all of its references."
   (if
@@ -280,7 +350,7 @@
 
 
 ;; AJAX handler for feed deletion:
-(defun-ajax delfeed (feed-id)
+(defun-ajax ajax-delete-feed (feed-id)
   (*ajax-processor* :callback-data :response-text)
   (if
    (delete-feed (list feed-id))
@@ -443,15 +513,16 @@
 
 
 ;; AJAX handler for feed parsing:
-(defun-ajax parsefeeds ()
+(defun-ajax ajax-parse-feeds ()
   (*ajax-processor* :callback-data :response-text)
   (setf *is-web* t)
-  (parse-all-feeds))
+  (parse-all-feeds)
+  "Good news: We just refreshed all of your generated RSS feeds. :-)")
 
 
 (defun start-webserver ()
   "Runs the RSS parser's built-in web server."
-  (format t "Starting the web server. Press Ctrl+C to quit.")
+  (format t "Starting the web server on port ~d. Press Ctrl+C to quit.~%~%" +webserver-port+)
   (force-output nil)
   (defparameter *server*
     (start (make-instance 'easy-acceptor :port +webserver-port+))))
@@ -492,7 +563,10 @@
      (parse-all-feeds))
     ((string= *script-mode* "webserver")
      ;; start the web server
-     (start-webserver))
+     (handler-case
+         (start-webserver)
+       (sb-sys:interactive-interrupt ()
+         (format t "~%~%Quitting the web server. Goodbye.~%~%"))))
     (t
      ;; else ...
      (show-syntax))))
