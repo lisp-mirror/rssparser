@@ -49,6 +49,24 @@ By default, the KiTTY website feed will be stored as `feeds/feed23.xml` then.
 
 You'll need the files from this repository and [SBCL](http://www.sbcl.org) with [Quicklisp](http://www.quicklisp.org) set up. [SQLite3](http://www.sqlite3.org) should be available. Also, you should create a folder where your feed files should be created (`./feeds` by default). Hard links are allowed.
 
+### Packages
+
+Usually, Quicklisp should install the required packages for you. If you want to install them manually, `rssparser.lisp` currently requires these:
+
+* `datafly`
+* `hunchentoot`
+* `cl-who`
+* `parenscript`
+* `smackjack`
+* `lass`
+* `cl-ppcre`
+* `dexador`
+* `clss`
+* `plump`
+* `plump-sexp`
+* `local-time`
+* `xml-emitter`
+
 ### SQLite schema
 
 The `feeds.db` file has the following schema:
