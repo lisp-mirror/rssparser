@@ -492,12 +492,17 @@
            (sb-bsd-sockets:interrupted-error ()
              ;; Connection interrupted.
              (format t (concatenate 'string "~%Feed " (prin1-to-string (car feed-id)) " has a website which is "
-                                   " temporarily unavailable. We'll try later.")))
+                                   "temporarily unavailable. We'll try later.")))
 
            (dex:http-request-service-unavailable ()
              ;; Temporary website error. Retry later.
              (format t (concatenate 'string "~%Feed " (prin1-to-string (car feed-id)) " has a website which is "
-                                   " temporarily unavailable. We'll try later.")))
+                                   "temporarily unavailable. We'll try later.")))
+
+           (dex:http-request-forbidden ()
+             ;; Probably also temporary website error. Retry later.
+             (format t (concatenate 'string "~%Feed " (prin1-to-string (car feed-id)) " has a website which is "
+                                   "temporarily unavailable. We'll try later.")))
 
            (dex:http-request-failed (e)
              ;; Page not found. Assume it is gone.
