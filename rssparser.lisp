@@ -489,6 +489,11 @@
                (format t "Please fix the access rights for ~a for this script to work.~%" +feed-folder+))
              (return nil))
 
+           (simple-stream-error ()
+             ;; Connection reset by peer.
+             (format t (concatenate 'string "~%Feed " (prin1-to-string (car feed-id)) " has a website which is "
+                                   "temporarily unavailable. We'll try later.")))
+
            (sb-bsd-sockets:interrupted-error ()
              ;; Connection interrupted.
              (format t (concatenate 'string "~%Feed " (prin1-to-string (car feed-id)) " has a website which is "
