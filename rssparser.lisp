@@ -11,6 +11,7 @@
 ;;;  * ./rssparser.lisp add <Title> <URL> <EntrySelector> <TitleSelector> [<ContentSelector>]
 ;;;  * ./rssparser.lisp del(ete) <ID>
 ;;;  * ./rssparser.lisp list
+;;;  * ./rssparser.lisp export <ID>
 ;;;  * ./rssparser.lisp webserver
 ;;;  * ./rssparser.lisp parse
 
@@ -29,7 +30,7 @@
 
 (defun show-syntax ()
   "Prints the command-line syntax for the RSS parser."
-  (format t "Syntax:~% * rssparser.lisp add <Title> <URL> <EntrySelector> <TitleSelector> [<ContentSelector>]~% * rssparser.lisp delete <ID>~% * rssparser.lisp list~% * rssparser.lisp webserver~%~%If you're a bot:~% * rssparser.lisp parse"))
+  (format t "Syntax:~% * rssparser.lisp add <Title> <URL> <EntrySelector> <TitleSelector> [<ContentSelector>]~% * rssparser.lisp delete <ID>~% * rssparser.lisp list~% * rssparser.lisp export <ID>~% * rssparser.lisp webserver~%~%If you're a bot:~% * rssparser.lisp parse"))
 
 
 (defun print-feed-list (list)
@@ -353,6 +354,43 @@
      nil)))
 
 
+(defun export-feed (id)
+  "Exports a feed's INSERT command for transferring it into another database."
+  (if
+   (and
+    (eql 1 (list-length id))
+    (numberp (parse-integer (car id) :junk-allowed t)))
+   (progn
+     (let* ((id-to-export (car id))
+            (feed (retrieve-one (select
+                                 (:feedtitle :url :entryselector :titleselector :contentselector)
+                                 (from :feeds)
+                                 (where (:= :id id-to-export))))))
+
+       ;; The <id-to-export> is the number of the feed to export.
+       (if feed
+           (progn
+             ;; This feed exists. Export it.
+             (let
+                 ((feed-title (second feed))
+                  (feed-url (fourth feed))
+                  (feed-entries (sixth feed))
+                  (feed-entry-titles (eighth feed))
+                  (feed-entry-contents (tenth feed)))
+               (concatenate 'string
+                            "INSERT INTO feeds SET feedtitle='" feed-title "' "
+                            "url='" feed-url "' "
+                            "entryselector='" feed-entries "' "
+                            "titleselector='" feed-entry-titles "' "
+                            "contentselector='" feed-entry-contents "';")))
+           ;; No such feed in the database
+           nil)))
+   (progn
+     ;; invalid number of arguments or ID is NaN
+     (show-syntax)
+     nil)))
+
+
 ;; AJAX handler for feed deletion:
 (defun-ajax ajax-delete-feed (feed-id)
   (*ajax-processor* :callback-data :response-text)
@@ -554,15 +592,15 @@
      ;; add an entry
      (when
          (add-new-feed *script-arguments*)
-       (format t "Success!")))
+       (format t "Success!~%")))
     ((or
       (string= *script-mode* "delete")
       (string= *script-mode* "del"))
      ;; remove an entry
      (if
       (delete-feed *script-arguments*)
-      (format t "Deletion successful!")
-      (format t "This feed could not be deleted.")))
+      (format t "Deletion successful!~%")
+      (format t "This feed could not be deleted.~%")))
     ((string= *script-mode* "list")
      ;; list all entries
      (let ((feedlist (list-all-feeds)))
@@ -577,6 +615,12 @@
              (force-output nil)
              (print-feed-list feedlist))
            (format t "You don't have any feeds yet."))))
+    ((string= *script-mode* "export")
+     ;; show an SQLite command to transfer this feed elsewhere
+     (let ((result (export-feed *script-arguments*)))
+      (if result
+       (format t "Execute this SQL command to add this feed to a new database:~%  ~A~%~%" result)
+       (format t "This feed could not be exported.~%"))))
     ((string= *script-mode* "parse")
      ;; the parser for existing sites
      (parse-all-feeds))

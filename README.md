@@ -16,6 +16,7 @@ This software was written because a disappointing number of websites still does 
   * ./rssparser.lisp add *<Title> <URL> <EntrySelector> <TitleSelector> [<ContentSelector>]*
   * ./rssparser.lisp delete *<ID>*
   * ./rssparser.lisp list
+  * ./rssparser.lisp export *<ID>*
 
 ***Run a simple web interface on port 5000:***
 
@@ -90,6 +91,13 @@ The `feeds.db` file has the following schema:
       timestamp integer
     );
 
+### Exporting feeds into a new database
+
+If you want to transfer one or more of your stored feeds into a new database, that's what the `export` command is for:
+
+    % ./rssparser.lisp export 23
+    Execute this SQL command to add this feed to a new database:
+      INSERT INTO feeds SET feedtitle='KiTTY' url='http://www.9bis.net/kitty/?action=news&zone=en' entryselector='.news' titleselector='h1' contentselector='';
 
 ## Configuration
 
