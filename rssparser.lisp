@@ -1,7 +1,7 @@
 #!/opt/local/bin/sbcl --script
 
 ;;; Web to RSS Parser
-;;; by tux. [ http://tuxproject.de ]
+;;; by tux. [ https://tuxproject.de ]
 ;;;
 ;;; Licensed under the terms of the WTFPL.
 ;;; http://wtfpl.net/txt/copying/

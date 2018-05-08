@@ -4,7 +4,7 @@ A Web-to-RSS parser in Common Lisp.
 
 ## What does it do?
 
-This software was written because a disappointing number of websites still does not have an RSS or Atom feed so I could subscribe to their updates, e.g. the [KiTTY website](http://www.9bis.net/kitty/?action=news&zone=en). The script tries to find new *articles* on any website according to given criteria (CSS selectors) and parse them into a valid RSS feed so I can subscribe to them in my usual RSS feed reader.
+This software was written because a disappointing number of websites still does not have an RSS or Atom feed so I could subscribe to their updates, e.g. the [KiTTY website](https://www.9bis.net/kitty/?action=news&zone=en). The script tries to find new *articles* on any website according to given criteria (CSS selectors) and parse them into a valid RSS feed so I can subscribe to them in my usual RSS feed reader.
 
 ## Screenshot
 
@@ -32,7 +32,7 @@ Supported *selectors* are all valid [CSS selectors](http://www.w3schools.com/css
 
 If you want to subscribe to the KiTTY website, you can either use the web interface or perform the following commands:
 
-    % ./rssparser.lisp add "KiTTY" "http://www.9bis.net/kitty/?action=news&zone=en" ".news" "h1" ""
+    % ./rssparser.lisp add "KiTTY" "https://www.9bis.net/kitty/?action=news&zone=en" ".news" "h1" ""
     Success!
 
     % ./rssparser.lisp parse
@@ -41,14 +41,14 @@ If you want to subscribe to the KiTTY website, you can either use the web interf
     1 feed is set up:
 
     ID: 23  Title:        KiTTY
-            URL:          http://www.9bis.net/kitty/?action=news&zone=en
+            URL:          https://www.9bis.net/kitty/?action=news&zone=en
             Last success: Sun, 27 Mar 2016 17:54:18 +0200
 
 By default, the KiTTY website feed will be stored as `feeds/feed23.xml` then.
 
 ## Requirements
 
-You'll need the files from this repository and [SBCL](http://www.sbcl.org) with [Quicklisp](http://www.quicklisp.org) set up. [SQLite3](http://www.sqlite3.org) should be available. Also, you should create a folder where your feed files should be created (`./feeds` by default). Hard links are allowed.
+You'll need the files from this repository and [SBCL](http://www.sbcl.org) with [Quicklisp](http://www.quicklisp.org) set up. [SQLite3](https://sqlite3.org) should be available. Also, you should create a folder where your feed files should be created (`./feeds` by default). Hard links are allowed.
 
 ### Packages
 
@@ -97,7 +97,7 @@ If you want to transfer one or more of your stored feeds into a new database, th
 
     % ./rssparser.lisp export 23
     Execute this SQL command to add this feed to a new database:
-      INSERT INTO feeds ('feedtitle', 'url', 'entryselector', 'titleselector', 'contentselector') VALUES ('KiTTy', 'http://www.9bis.net/kitty/?action=news&zone=en', '.news', 'h1', '');
+      INSERT INTO feeds ('feedtitle', 'url', 'entryselector', 'titleselector', 'contentselector') VALUES ('KiTTy', 'https://www.9bis.net/kitty/?action=news&zone=en', '.news', 'h1', '');
 
 ## Configuration
 
