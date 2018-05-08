@@ -1,4 +1,4 @@
-#!/usr/local/bin/sbcl --script
+#!/opt/local/bin/sbcl --script
 
 ;;; Web to RSS Parser
 ;;; by tux. [ http://tuxproject.de ]
@@ -378,11 +378,8 @@
                   (feed-entry-titles (eighth feed))
                   (feed-entry-contents (tenth feed)))
                (concatenate 'string
-                            "INSERT INTO feeds SET feedtitle='" feed-title "' "
-                            "url='" feed-url "' "
-                            "entryselector='" feed-entries "' "
-                            "titleselector='" feed-entry-titles "' "
-                            "contentselector='" feed-entry-contents "';")))
+			    "INSERT INTO feeds ('feedtitle', 'url', 'entryselector', 'titleselector', 'contentselector') "
+			    "VALUES ('" feed-title "', '" feed-url "', '" feed-entries "', '" feed-entry-titles "', '" feed-entry-contents "');")))
            ;; No such feed in the database
            nil)))
    (progn

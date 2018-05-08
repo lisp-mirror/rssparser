@@ -97,7 +97,7 @@ If you want to transfer one or more of your stored feeds into a new database, th
 
     % ./rssparser.lisp export 23
     Execute this SQL command to add this feed to a new database:
-      INSERT INTO feeds SET feedtitle='KiTTY' url='http://www.9bis.net/kitty/?action=news&zone=en' entryselector='.news' titleselector='h1' contentselector='';
+      INSERT INTO feeds ('feedtitle', 'url', 'entryselector', 'titleselector', 'contentselector') VALUES ('KiTTy', 'http://www.9bis.net/kitty/?action=news&zone=en', '.news', 'h1', '');
 
 ## Configuration
 
