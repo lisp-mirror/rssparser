@@ -8,7 +8,7 @@
 
 
 ;;; valid syntax:
-;;;  * ./rssparser.lisp add <Title> <URL> <EntrySelector> <TitleSelector> [<ContentSelector>]
+;;;  * ./rssparser add <Title> <URL> <EntrySelector> <TitleSelector> [<ContentSelector>]
 ;;;  * ./rssparser.lisp del(ete) <ID>
 ;;;  * ./rssparser.lisp list
 ;;;  * ./rssparser.lisp export <ID>
@@ -291,9 +291,7 @@
         (let ((content
                (if (fifth params)
                    (princ-to-string (fifth params))
-                   ;; Make life somewhat easier for Web UI users: If
-                   ;; nothing is entered, handle it as an empty string.
-                   (if *is-web*  "" "Generated with rssparser.lisp."))))
+                   "")))
           (execute
            ;; all arguments are set (probably even correctly).
            (insert-into :feeds
