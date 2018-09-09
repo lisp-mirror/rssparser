@@ -26,7 +26,7 @@ This software was written because a disappointing number of websites still does 
 
 * ./rssparser.lisp parse
 
-Supported *selectors* are all valid [CSS selectors](http://www.w3schools.com/cssref/css_selectors.asp). If you don't specify a `ContentSelector` when adding a new feed, `rssparser.lisp` will use "Generated with rssparser.lisp." as every feed item's body.
+Supported *selectors* are all valid [CSS selectors](http://www.w3schools.com/cssref/css_selectors.asp). If you don't specify a `ContentSelector` when adding a new feed, `rssparser.lisp` will use an empty item body.
 
 ### Example
 
